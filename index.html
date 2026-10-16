@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Green Building Digital Twin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600&family=Big+Shoulders+Display:wght@700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  @property --i { syntax:'<number>'; inherits:false; initial-value:0; }
+  :root { --bg:#09090b; --hi:#1b1b1f; --lo:#111113; --edge:#2c2c32; --edge-hi:#5a5a64; --ink:#f3f3f1; --label:#9d9da8;
+    --screen:#f3f3f1; --line:#d8d8d4; --st:#111113; --dim:#5d5e66; --ok:#3ddc84; --alarm:#ff5a4d;
+    --display:'Big Shoulders Display','Bahnschrift','Arial Narrow',sans-serif; --body:'Barlow Semi Condensed','Segoe UI',system-ui,sans-serif; --mono:'JetBrains Mono',Consolas,monospace; }
+  * { box-sizing:border-box; } html,body { margin:0; }
+  body { min-height:100vh; color:var(--ink); font:16px/1.4 var(--body); background-attachment:fixed;
+    background:radial-gradient(900px 500px at 15% -10%,rgba(120,130,255,.12),transparent 60%),radial-gradient(800px 500px at 100% 10%,rgba(61,220,132,.08),transparent 60%),radial-gradient(rgba(255,255,255,.045) 1px,transparent 1px) 0 0/22px 22px,var(--bg); }
+  .nav { position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 40px; background:rgba(9,9,11,.75); backdrop-filter:blur(10px); border-bottom:1px solid var(--edge); }
+  .brand { font:700 15px var(--mono); } .right { display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end; }
+  .share { font:500 13px var(--mono); color:var(--label); padding:5px 12px; border:1px dashed var(--edge-hi); border-radius:999px; background:none; cursor:pointer; }
+  .share:hover { color:var(--ink); }
+  .badge { display:inline-flex; align-items:center; gap:8px; padding:5px 14px; border:1px solid var(--edge); border-radius:999px; font-weight:600; font-size:15px; }
+  .dot { width:10px; height:10px; border-radius:50%; background:#6a6a74; }
+  [data-state=live] .dot { background:var(--ok); animation:pulse 1.8s ease-out infinite; } [data-state=offline] .dot { background:var(--alarm); }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(61,220,132,.65)} 100%{box-shadow:0 0 0 10px rgba(61,220,132,0)} }
+  .clock { font:500 14px var(--mono); color:var(--label); }
+  .wrap { max-width:1500px; margin:0 auto; padding:0 40px; }
+  .hero { padding:48px 0 24px; } .eyebrow { font:500 13px var(--mono); color:var(--label); letter-spacing:.14em; text-transform:uppercase; margin-bottom:12px; }
+  .hero h1 { margin:0; font:800 clamp(46px,7.5vw,98px)/.92 var(--display); } .hero h1 em { font-style:normal; color:transparent; -webkit-text-stroke:1.5px var(--ink); }
+  .caret { display:inline-block; width:.34em; height:.76em; margin-left:.1em; background:var(--ink); vertical-align:-.02em; animation:blink 1s steps(2,start) infinite; } @keyframes blink { to { visibility:hidden } }
+  .hero p { margin:16px 0 0; color:var(--label); font-size:20px; max-width:60ch; }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; padding-bottom:22px; }
+  .stat { padding:16px 20px; border:1px solid var(--edge); border-radius:10px; background:linear-gradient(var(--hi),var(--lo)); transition:border-color .2s,transform .2s; } .stat:hover { border-color:var(--ink); transform:translateY(-2px); }
+  .stat span { display:block; color:var(--label); font:500 12px var(--mono); letter-spacing:.1em; text-transform:uppercase; }
+  .stat b { display:block; margin-top:6px; font:700 42px/1 var(--display); font-variant-numeric:tabular-nums; } .stat small { font:500 15px var(--body); color:var(--label); margin-left:6px; }
+  main { display:grid; grid-template-columns:minmax(0,1.8fr) minmax(330px,1fr); gap:22px; align-items:start; padding-bottom:56px; } .col { display:grid; gap:22px; min-width:0; }
+  .module { background:linear-gradient(var(--hi),var(--lo)); border:1px solid var(--edge); border-radius:12px; padding:18px; box-shadow:0 20px 50px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.04); transition:border-color .2s; } .module:hover { border-color:var(--edge-hi); }
+  .module h2 { margin:0 0 14px; display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+  .module h2 b { font:700 14px var(--mono); text-transform:uppercase; letter-spacing:.06em; } .module h2 b::before { content:'> '; color:var(--label); } .module h2 span { color:var(--label); font-size:15px; }
+  .screen { position:relative; background:var(--screen); color:var(--st); border:1px solid #000; border-radius:7px; overflow:hidden; box-shadow:inset 0 0 0 2px #dcdcd8,inset 0 3px 14px rgba(0,0,0,.12); }
+  .zones { display:grid; gap:18px; } .zone { display:grid; grid-template-columns:270px minmax(0,1fr); gap:16px; padding-top:18px; border-top:1px solid var(--edge); } .zone:first-child { padding-top:0; border-top:0; }
+  .cam { aspect-ratio:16/9; align-self:start; } .cam img { width:100%; height:100%; object-fit:cover; display:block; }
+  .tag { position:absolute; top:8px; left:8px; display:flex; align-items:center; gap:7px; padding:3px 10px 3px 8px; border-radius:4px; background:rgba(0,0,0,.78); color:var(--ink); font:600 12px var(--mono); }
+  .tag i { width:8px; height:8px; border-radius:50%; background:var(--alarm); animation:blink 1s steps(2,start) infinite; }
+  .zhead { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; } .zhead b { font:700 30px/1 var(--display); }
+  .chip { padding:3px 12px; border:1px solid var(--edge-hi); border-radius:999px; font:600 13px var(--mono); }
+  .stage { height:118px; padding:38px 10px 0; perspective:900px; perspective-origin:50% 8%; }
+  .floor { --glow:150,150,160; width:94%; margin:0 auto; transform:rotateX(58deg); transform-style:preserve-3d; }
+  .strip { display:flex; gap:3px; padding:9px; background:#e9e9e6; border:2px solid #cdcdc8; border-radius:4px; transform-style:preserve-3d; }
+  .tile { --i:0; flex:1; height:42px; border-radius:2px; background-color:#d3d3ce; transition:--i .14s linear; transform-style:preserve-3d;
+    background-image:linear-gradient(rgba(var(--glow),var(--i)),rgba(var(--glow),var(--i)));
+    box-shadow:0 calc(var(--i)8px) calc(var(--i)*22px) rgba(var(--glow),calc(var(--i).5)),inset 0 0 calc(var(--i)8px) rgba(255,255,255,calc(var(--i).35)); transform:translateZ(calc(var(--i)*24px)); }
+  .zfoot { display:flex; gap:22px; margin-top:10px; color:var(--label); font-size:15px; flex-wrap:wrap; } .zfoot b { color:var(--ink); font:700 20px var(--display); margin-left:4px; }
+  .meter { height:6px; background:#2a2a30; border-radius:3px; margin-top:8px; overflow:hidden; } .meter i { display:block; height:100%; background:var(--ok); width:0; transition:width .2s; }
+  .bars { padding:16px 18px; display:grid; gap:16px; } .brow { display:grid; gap:6px; } .bl { display:flex; justify-content:space-between; color:var(--dim); font-size:15px; } .bl b { color:var(--st); font:700 22px/1 var(--display); }
+  .track { height:18px; background:#dcdcd8; border-radius:2px; overflow:hidden; } .track i { display:block; height:100%; width:0; transition:width .2s; background:#111113; } .track i.g { background:#16a34a; }
+  .kv { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; text-align:center; padding:2px 0; } .kv b { display:block; font:700 30px/1 var(--display); color:var(--st); } .kv span { color:var(--dim); font-size:14px; }
+  .note { margin:12px 2px 0; color:var(--label); font-size:13px; }
+  .insight { padding:14px 18px; min-height:150px; font-size:17px; line-height:1.45; } .insight p { margin:0 0 10px; padding-left:18px; position:relative; } .insight p::before { content:'>'; position:absolute; left:0; font-family:var(--mono); color:var(--dim); }
+  .ai-meta { display:flex; justify-content:space-between; align-items:center; margin-top:12px; color:var(--label); font:500 13px var(--mono); }
+  .btn { padding:9px 20px; border:1px solid var(--ink); border-radius:4px; background:transparent; color:var(--ink); font:600 15px var(--body); cursor:pointer; transition:background .2s,color .2s; } .btn:hover { background:var(--ink); color:var(--lo); }
+  .cam-btn { position:absolute; inset:0; width:100%; border:0; background:repeating-linear-gradient(135deg,#ecece8 0 12px,#e4e4e0 12px 24px); color:var(--st); cursor:pointer; display:grid; place-content:center; justify-items:center; gap:6px; font:600 16px var(--body); transition:background .2s; }
+  .cam-btn b { font-size:30px; line-height:1; } .cam-btn:hover { background:#d9d9d4; }
+  .pip { position:fixed; right:20px; bottom:20px; z-index:50; width:360px; max-width:calc(100vw - 24px); border:1px solid var(--edge-hi); border-radius:8px; background:var(--lo); box-shadow:0 20px 60px rgba(0,0,0,.6); } .pip[hidden] { display:none; } .pip.big { width:640px; }
+  .pip-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 8px 6px 12px; cursor:grab; font:600 12px var(--mono); touch-action:none; user-select:none; } .pip-bar:active { cursor:grabbing; }
+  .pip-bar .dot { display:inline-block; background:var(--alarm); margin-right:8px; width:8px; height:8px; } .pip-bar button { border:0; border-radius:4px; width:28px; height:26px; background:#2a2a30; color:var(--ink); cursor:pointer; } .pip-bar button:hover { background:var(--alarm); }
+  .pip-view { aspect-ratio:16/9; background:#000; border-radius:0 0 7px 7px; overflow:hidden; } .pip-view img { width:100%; height:100%; object-fit:cover; display:block; }
+  @media (max-width:1060px) { main { grid-template-columns:1fr; } .stats { grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:700px) { .nav,.wrap { padding-left:16px; padding-right:16px; } .zone { grid-template-columns:1fr; } .clock { display:none; } }
+  @media (prefers-reduced-motion:reduce) { ,::before,*::after { transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <span class="brand">&gt; green_twin</span>
+  <div class="right">
+    <button class="share" id="share" title="Click to copy">Share link</button>
+    <div data-state="connecting" id="status"><span class="badge"><i class="dot"></i><span id="statusText">Connecting</span></span></div>
+    <span class="clock" id="clock">--:--:--</span>
+  </div>
+</nav>
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">Green building digital twin / computer vision / GenAI</div>
+    <h1>Light that <em>leads</em> the way<span class="caret"></span></h1>
+    <p>Cameras track who is where. Virtual lights switch on ahead of each person and fade behind them, like a game engine pre-rendering the next frame, while the twin measures the energy saved.</p>
+  </header>
+  <section class="stats">
+    <div class="stat"><span>People in building</span><b id="sPeople">0</b></div>
+    <div class="stat"><span>Power now</span><b><i id="sW" style="font-style:normal">0</i><small id="sBase">of 0 W</small></b></div>
+    <div class="stat"><span>Energy saved</span><b><i id="sPct" style="font-style:normal">0</i><small>%</small></b></div>
+    <div class="stat"><span>CO&#8322; avoided</span><b><i id="sCo2" style="font-style:normal">0</i><small>g</small></b></div>
+  </section>
+  <main>
+    <div class="col">
+      <section class="module">
+        <h2><b>Building zones</b> <span>One camera per zone</span></h2>
+        <div class="zones" id="zones"></div>
+      </section>
+    </div>
+    <div class="col">
+      <section class="module">
+        <h2><b>Resource usage</b> <span>Lighting</span></h2>
+        <div class="screen bars">
+          <div class="brow"><div class="bl"><span>Always-on baseline</span><b id="bBase">0 W</b></div><div class="track"><i style="width:100%"></i></div></div>
+          <div class="brow"><div class="bl"><span>Digital twin now</span><b id="bNow">0 W</b></div><div class="track"><i class="g" id="bBar"></i></div></div>
+          <div class="kv"><div><b id="kWh">0</b><span>Wh saved</span></div><div><b id="kCo2">0</b><span>g CO&#8322;</span></div><div><b id="kRs">0</b><span>&#8377; / month*</span></div></div>
+        </div>
+        <p class="note" id="note"></p>
+        <p class="note">*Extrapolated if the current rate held for a month.</p>
+      </section>
+      <section class="module">
+        <h2><b>GenAI recommendations</b> <span id="aiSrc">rules</span></h2>
+        <div class="screen insight" id="insight"></div>
+        <div class="ai-meta"><span id="aiAge">&nbsp;</span><button class="btn" id="aiBtn">Analyze now</button></div>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="pip" id="pip" hidden>
+  <div class="pip-bar" id="pipBar">
+    <span><i class="dot"></i><span id="pipTitle"></span></span>
+    <span><button id="pipSize" title="Resize" aria-label="Resize camera">&#10530;</button> <button id="pipClose" aria-label="Close camera">&#10005;</button></span>
+  </div>
+  <div class="pip-view"><img id="pipImg" alt="Live camera feed"></div>
+</div>
+<script>
+  const $ = id => document.getElementById(id), TILES = 30;
+  const GLOW = { RIGHT:'245,158,11', LEFT:'37,99,235', STATIONARY:'22,163,74', NONE:'150,150,160' };
+  const WORD = { RIGHT:'Moving right', LEFT:'Moving left', STATIONARY:'Standing' };
+  let built = false, Z = [], lastTs = 0;
+
+  function build(cams) {
+    $('zones').innerHTML = Object.keys(cams).map(id => `
+      <div class="zone">
+        <div class="screen cam"><button class="cam-btn" data-id="${id}" data-name="${cams[id].name}"><b>&#9654;</b>View live camera</button><div class="tag"><span>${cams[id].name}</span></div></div>
+        <div>
+          <div class="zhead"><b>${cams[id].name}</b><span class="chip">Vacant</span></div>
+          <div class="screen stage"><div class="floor"><div class="strip"></div></div></div>
+          <div class="zfoot"><span>People<b class="p">0</b></span><span>Speed<b class="s">0.00</b> u/s</span><span>Power<b class="w">0</b> W</span></div>
+          <div class="meter"><i></i></div>
+        </div>
+      </div>`).join('');
+    Z = [...document.querySelectorAll('.zone')].map(el => {
+      const strip = el.querySelector('.strip'), tiles = [];
+      for (let i = 0; i < TILES; i++) { const t = document.createElement('div'); t.className = 'tile'; strip.appendChild(t); tiles.push(t); }
+      return { tiles, floor: el.querySelector('.floor'), chip: el.querySelector('.chip'), p: el.querySelector('.p'), s: el.querySelector('.s'), w: el.querySelector('.w'), m: el.querySelector('.meter i') };
+    });
+    built = true;
+  }
+
+  function render(d) {
+    if (!built) build(d.cams);
+    Object.keys(d.cams).forEach((id, k) => {
+      const c = d.cams[id], z = Z[k];
+      c.grid.forEach((g, i) => z.tiles[i].style.setProperty('--i', g));
+      z.floor.style.setProperty('--glow', c.occupancy ? GLOW[c.direction] : GLOW.NONE);
+      z.chip.textContent = !c.online ? 'No signal' : c.occupancy ? WORD[c.direction] : 'Vacant';
+      z.p.textContent = c.occupancy; z.s.textContent = c.velocity.toFixed(2); z.w.textContent = Math.round(c.watts);
+      z.m.style.width = (100 * c.watts / c.baseline_watts) + '%';
+    });
+    const b = d.building;
+    $('sPeople').textContent = b.occupancy; $('sW').textContent = b.watts; $('sBase').textContent = 'of ' + b.baseline_watts + ' W';
+    $('sPct').textContent = b.saved_pct; $('sCo2').textContent = b.co2_g;
+    $('bBase').textContent = b.baseline_watts + ' W'; $('bNow').textContent = b.watts + ' W';
+    $('bBar').style.width = (b.baseline_watts ? 100 * b.watts / b.baseline_watts : 0) + '%';
+    $('kWh').textContent = b.wh_saved; $('kCo2').textContent = b.co2_g; $('kRs').textContent = b.rs_month; $('note').textContent = b.note;
+    $('share').textContent = d.lan_url; $('share').dataset.url = d.lan_url;
+    if (d.insight.ts !== lastTs || !lastTs) {
+      lastTs = d.insight.ts;
+      $('insight').innerHTML = d.insight.text.split('\n').filter(Boolean).map(l => '<p></p>').join('');
+      [...$('insight').children].forEach((p, i) => p.textContent = d.insight.text.split('\n').filter(Boolean)[i]);
+      $('aiSrc').textContent = d.insight.source; $('aiBtn').textContent = 'Analyze now';
+    }
+    $('aiAge').textContent = lastTs ? 'Updated ' + Math.round(Date.now() / 1000 - lastTs) + 's ago' : '';
+  }
+
+  const st = $('status'); function online(on) { const n = on ? 'live' : 'offline'; if (st.dataset.state !== n) { st.dataset.state = n; $('statusText').textContent = on ? 'Live' : 'Server not responding'; } }
+  $('share').onclick = () => { try { navigator.clipboard.writeText($('share').dataset.url); $('share').textContent = 'Copied'; } catch (e) {} };
+  $('aiBtn').onclick = () => { $('aiBtn').textContent = 'Analyzing...'; fetch('/api/ai/run', { method:'POST' }).catch(() => {}); };
+  setInterval(() => { $('clock').textContent = new Date().toLocaleTimeString('en-GB'); }, 1000);
+
+  const pip = $('pip'), pImg = $('pipImg');
+  function openCam(id, name) { pImg.src = '/video_feed/' + id + '?t=' + Date.now(); $('pipTitle').textContent = name; pip.hidden = false; }
+  function closeCam() { pip.hidden = true; pImg.removeAttribute('src'); }   // closing drops the stream connection
+  $('zones').addEventListener('click', e => { const b = e.target.closest('.cam-btn'); if (b) openCam(b.dataset.id, b.dataset.name); });
+  $('pipClose').onclick = closeCam; $('pipSize').onclick = () => pip.classList.toggle('big');
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !pip.hidden) closeCam(); });
+  // drag the camera window anywhere so it never has to cover the lights
+  let dx = 0, dy = 0, drag = false; const bar = $('pipBar');
+  bar.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; drag = true; const r = pip.getBoundingClientRect(); dx = e.clientX - r.left; dy = e.clientY - r.top; bar.setPointerCapture(e.pointerId); });
+  bar.addEventListener('pointermove', e => { if (!drag) return; pip.style.left = Math.max(0, Math.min(innerWidth - pip.offsetWidth, e.clientX - dx)) + 'px'; pip.style.top = Math.max(0, Math.min(innerHeight - pip.offsetHeight, e.clientY - dy)) + 'px'; pip.style.right = pip.style.bottom = 'auto'; });
+  bar.addEventListener('pointerup', () => { drag = false; });
+
+  let fails = 0;
+  (async function poll() {
+    try { const r = await fetch('/state', { cache:'no-store' }); if (!r.ok) throw 0; render(await r.json()); fails = 0; online(true); }
+    catch (e) { if (++fails >= 5) online(false); }
+    setTimeout(poll, 100);
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Secrets and local environment settings
+.env
+.env.*
+!.env.example
+secrets/
+.cloudflared/
+cert.pem
+*.pem
+*.key
+
+# Logs and generated files
+*.log
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# VS Code and other editor settings
+.vscode/
+.idea/
