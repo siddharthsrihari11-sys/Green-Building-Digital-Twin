@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Green Building Digital Twin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#030c09; --text:#e7f5ed; --muted:#8ba79a; --faint:#5d7a6d;
+    --line:rgba(52,211,153,.16); --line2:rgba(52,211,153,.34);
+    --card:linear-gradient(180deg,rgba(13,36,29,.92),rgba(7,21,17,.94));
+    --green:#22c55e; --mint:#34d399; --lime:#a3e635; --cyan:#22d3ee; --amber:#f5b83d; --red:#ef4444; --blue:#38bdf8;
+    --font:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; }
+  body {
+    min-height:100vh; color:var(--text); font:14px/1.45 var(--font);
+    background:radial-gradient(1200px 620px at 82% -12%,rgba(34,197,94,.13),transparent 60%),radial-gradient(900px 520px at 0% 22%,rgba(20,184,166,.10),transparent 60%),var(--bg);
+    background-attachment:fixed;
+  }
+  :focus-visible { outline:2px solid #7dd3fc; outline-offset:2px; }
+  button { font:inherit; color:inherit; }
+  .ic { width:20px; height:20px; flex:none; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+  .ic.fill { fill:currentColor; stroke:none; }
+  .g { color:var(--mint); }
+
+  /* ---------- header ---------- */
+  .top { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:14px 28px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,rgba(6,26,19,.92),rgba(4,14,11,.6)); }
+  .brand { display:flex; align-items:center; gap:14px; min-width:0; }
+  .logo { width:46px; height:46px; stroke:var(--green); stroke-width:1.6; filter:drop-shadow(0 0 8px rgba(34,197,94,.45)); }
+  .brand h1 { margin:0; font-size:28px; line-height:1.1; font-weight:600; letter-spacing:-.01em; }
+  .brand p { margin:3px 0 0; color:var(--mint); font-size:14px; }
+  .pills { display:flex; gap:12px; flex-wrap:wrap; justify-content:flex-end; }
+  .pill { display:flex; align-items:center; gap:12px; padding:9px 18px; border:1px solid var(--line2); border-radius:14px; background:rgba(8,28,21,.72); }
+  .pill b { display:block; font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .pill small { display:block; color:var(--muted); font-size:12px; }
+  .pill .ic { width:24px; height:24px; color:var(--mint); }
+  .pill .sun { color:#fbbf24; }
+  button.pill.ai { cursor:pointer; background:rgba(14,116,144,.26); border-color:rgba(34,211,238,.55); color:#e6fbff; transition:background .2s; }
+  button.pill.ai:hover { background:rgba(14,116,144,.46); }
+  button.pill.ai .ic { color:var(--cyan); }
+  .dot { width:12px; height:12px; border-radius:50%; background:#6b7a73; flex:none; }
+  [data-state="live"] .dot { background:var(--green); animation:pulse 1.8s ease-out infinite; }
+  [data-state="offline"] .dot { background:var(--red); }
+  @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(34,197,94,.65); } 100% { box-shadow:0 0 0 10px rgba(34,197,94,0); } }
+
+  /* ---------- layout ---------- */
+  .shell { display:grid; grid-template-columns:250px minmax(0,1fr) 356px; gap:16px; padding:16px 28px 32px; max-width:1760px; margin:0 auto; align-items:start; }
+  .side, .center, .right { display:grid; gap:16px; min-width:0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; box-shadow:0 18px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04); scroll-margin-top:14px; }
+  .chead { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+  .chead h2 { display:flex; align-items:center; gap:10px; margin:0; font-size:17px; font-weight:600; }
+  .link { background:none; border:0; padding:0; color:var(--mint); font-size:13px; cursor:pointer; }
+  .link:hover { text-decoration:underline; }
+  .sel { appearance:none; background:rgba(8,28,21,.85) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2334d399' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 10px center; color:var(--text); border:1px solid var(--line2); border-radius:8px; padding:6px 30px 6px 12px; font:inherit; font-size:13px; cursor:pointer; }
+
+  /* ---------- sidebar ---------- */
+  .nav { display:grid; gap:4px; padding:10px; }
+  .nv { display:flex; align-items:center; gap:14px; width:100%; padding:12px 14px; border:0; border-radius:10px; background:none; color:#cfe6da; font-size:15px; font-weight:500; text-align:left; cursor:pointer; position:relative; transition:background .2s,color .2s; }
+  .nv:hover { background:rgba(34,197,94,.10); color:#fff; }
+  .nv.active { background:linear-gradient(90deg,rgba(34,197,94,.30),rgba(34,197,94,.08)); color:#fff; }
+  .nv.active::before { content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px; border-radius:2px; background:var(--green); }
+  .nv .ic { color:var(--mint); }
+  .sum h2 { display:flex; align-items:center; gap:10px; margin:0 0 6px; font-size:16px; font-weight:600; }
+  .row { display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--line); }
+  .row:first-of-type { border-top:0; }
+  .row .ic { color:var(--mint); }
+  .row .lb { flex:1; min-width:0; color:#cfe6da; font-size:13px; line-height:1.25; }
+  .row .lb small { display:block; color:var(--muted); font-size:11px; }
+  .row .vl { font-size:17px; font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .row.first { display:block; }
+  .row.first .lb { color:var(--muted); font-size:12px; }
+  .row.first .vl { display:block; margin-top:2px; }
+  .foot { margin:10px 0 0; color:var(--muted); font-size:11px; line-height:1.4; }
+
+  /* ---------- 3D view (big, legend floats over the empty corner) ---------- */
+  .scene-body { position:relative; }
+  .svgwrap { position:relative; border:1px solid var(--line); border-radius:12px; overflow:hidden;
+    background:
+      radial-gradient(520px 300px at 50% 55%,rgba(24,150,110,.40),rgba(3,12,9,0) 70%),
+      radial-gradient(380px 220px at 85% 10%,rgba(56,189,248,.10),transparent 70%),
+      radial-gradient(380px 220px at 10% 95%,rgba(163,230,53,.08),transparent 70%),
+      #04100c; }
+  .svgwrap svg { display:block; width:100%; height:auto; }
+  .compass { position:absolute; left:14px; bottom:14px; width:46px; height:46px; border:1px solid var(--line2); border-radius:50%; background:rgba(5,20,16,.8); display:grid; place-items:center; color:var(--mint); font-weight:600; font-size:12px; }
+  .compass::before { content:''; position:absolute; top:5px; width:0; height:0; border:5px solid transparent; border-bottom:9px solid var(--mint); border-top:0; }
+  .compass span { margin-top:14px; }
+  .lg { position:absolute; top:10px; right:10px; width:auto; white-space:nowrap; z-index:2; border:1px solid var(--line2); border-radius:12px; padding:8px 10px; background:rgba(5,20,16,.74); -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); display:grid; align-content:start; gap:8px; }
+  .lg h3 { margin:0; font-size:12px; font-weight:600; }
+  .gbar { display:flex; gap:10px; align-items:stretch; }
+  .gbar i { width:16px; height:70px; border-radius:4px; background:linear-gradient(#d9f244,#7bd634,#12b886,#0e7ac4,#1e2a78); }
+  .gbar ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; justify-content:space-between; color:var(--muted); font-size:11px; }
+  .lg ul.keys { list-style:none; margin:0; padding:7px 0 0; border-top:1px solid var(--line); display:grid; gap:5px; font-size:10.5px; color:#cfe6da; }
+  .keys li { display:flex; align-items:center; gap:8px; }
+  .keys .ic { width:15px; height:15px; }
+  .zb { width:15px; height:11px; border:1.5px dashed var(--mint); border-radius:2px; flex:none; }
+  #bld .ring { animation:ring 2.4s ease-out infinite; transform-box:fill-box; transform-origin:center; }
+  @keyframes ring { 0% { transform:scale(.6); opacity:.9; } 100% { transform:scale(1.8); opacity:0; } }
+
+  /* ---------- camera feeds ---------- */
+  .camgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; }
+  .camc { border:1px solid var(--line); border-radius:12px; padding:10px; background:rgba(5,20,16,.55); min-width:0; }
+  .camh { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; font-size:13px; }
+  .camh b { font-size:14px; font-weight:600; }
+  .camh span.nm { color:var(--muted); font-size:12px; margin-left:4px; }
+  .live { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--green); font-weight:600; }
+  .live i { width:7px; height:7px; border-radius:50%; background:currentColor; box-shadow:0 0 8px currentColor; }
+  .live.off { color:var(--faint); }
+  .vid { aspect-ratio:16/9; background:#0a1512; border-radius:8px; overflow:hidden; border:1px solid var(--line); }
+  .vid img { width:100%; height:100%; object-fit:cover; display:block; }
+  .meta { display:flex; justify-content:space-between; gap:6px; margin:9px 0 8px; font-size:12px; color:#cfe6da; white-space:nowrap; }
+  .meta span { display:inline-flex; align-items:center; gap:5px; }
+  .meta .ic { width:15px; height:15px; color:var(--mint); }
+  .pat { display:grid; grid-template-columns:repeat(15,1fr); gap:3px; height:13px; }
+  .pat i { border-radius:2px; background:#22312c; }
+  .cap { display:block; margin-top:5px; color:var(--muted); font-size:11px; }
+
+  /* ---------- right column ---------- */
+  .pillsrc { padding:3px 14px; border:1px solid var(--line2); border-radius:999px; background:rgba(34,211,238,.10); color:#b6f0fb; font-size:12px; font-weight:600; }
+  .upd { margin:-4px 0 10px; text-align:right; color:var(--muted); font-size:12px; }
+  .ins { display:grid; grid-template-columns:42px 1fr; gap:12px; padding:12px; margin-bottom:10px; border:1px solid var(--line); border-radius:12px; background:rgba(5,20,16,.6); }
+  .ins .ico { width:40px; height:40px; border:1.5px solid var(--green); border-radius:50%; display:grid; place-items:center; color:var(--mint); }
+  .ins h3 { margin:0 0 3px; color:var(--mint); font-size:14px; font-weight:600; }
+  .ins p { margin:0; color:#d3e8dc; font-size:12.5px; line-height:1.45; }
+  .aifoot { display:flex; justify-content:space-between; align-items:center; margin-top:2px; }
+  .btn { padding:7px 14px; border:1px solid var(--line2); border-radius:8px; background:rgba(8,28,21,.8); cursor:pointer; font-size:12.5px; font-weight:600; transition:background .2s; }
+  .btn:hover { background:rgba(34,197,94,.2); }
+  .alert { display:grid; grid-template-columns:34px 1fr auto; gap:10px; align-items:center; padding:10px; margin-top:8px; border:1px solid var(--line); border-radius:10px; background:rgba(5,20,16,.6); }
+  .alert .ico { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; background:rgba(239,68,68,.16); color:#fca5a5; }
+  .alert.warn .ico { background:rgba(245,184,61,.16); color:var(--amber); }
+  .alert.ok .ico { background:rgba(34,197,94,.16); color:var(--green); }
+  .alert b { display:block; font-size:13px; color:#fecaca; font-weight:600; }
+  .alert.warn b { color:#fde7b0; } .alert.ok b { color:#bbf7d0; }
+  .alert small { color:var(--muted); font-size:11.5px; }
+  .tagp { padding:2px 10px; border-radius:6px; border:1px solid currentColor; font-size:11px; font-weight:600; color:#fca5a5; background:rgba(239,68,68,.12); white-space:nowrap; }
+  .alert.warn .tagp { color:var(--amber); background:rgba(245,184,61,.12); }
+  .trendbox { position:relative; }
+  .trendbox canvas { width:100%; height:190px; display:block; }
+  .key { position:absolute; top:0; right:6px; display:flex; gap:14px; font-size:11.5px; color:var(--muted); }
+  .key i { display:inline-block; width:9px; height:9px; margin-right:6px; border-radius:50%; background:var(--green); }
+  .key i.b { border-radius:1px; background:#e5e7eb; transform:rotate(45deg) scale(.9); }
+  .occ { display:grid; grid-template-columns:132px 1fr; gap:16px; align-items:center; }
+  .donut { position:relative; width:132px; height:132px; }
+  .donut svg { width:100%; height:100%; transform:rotate(-90deg); }
+  .donut div { position:absolute; inset:0; display:grid; place-content:center; text-align:center; }
+  .donut b { font-size:30px; line-height:1; font-weight:600; font-variant-numeric:tabular-nums; }
+  .donut small { color:var(--muted); font-size:11px; }
+  .zbars { display:grid; gap:12px; }
+  .zbars .h { display:flex; justify-content:space-between; font-size:12.5px; color:#d3e8dc; }
+  .zbars .t { height:7px; margin-top:5px; border-radius:4px; background:rgba(255,255,255,.08); overflow:hidden; }
+  .zbars .t i { display:block; height:100%; width:0; border-radius:4px; transition:width .25s; }
+
+  dialog { background:#08211a; color:var(--text); border:1px solid var(--line2); border-radius:14px; padding:20px 22px; width:min(480px,92vw); }
+  dialog::backdrop { background:rgba(0,0,0,.6); }
+  dialog h2 { margin:0 0 12px; font-size:18px; }
+  dialog p { margin:0 0 12px; color:#cfe6da; font-size:13px; }
+  dialog code { background:rgba(255,255,255,.07); padding:2px 7px; border-radius:5px; }
+  .drow { display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+
+  @media (max-width:1380px) {
+    .shell { grid-template-columns:230px minmax(0,1fr); }
+    .right { grid-column:1 / -1; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  }
+  @media (max-width:980px) {
+    .shell { grid-template-columns:1fr; padding:14px 16px 28px; }
+    .top { flex-direction:column; align-items:flex-start; padding:14px 16px; }
+    .pills { justify-content:flex-start; }
+    .nav { grid-template-columns:repeat(2,1fr); }
+    .right { grid-template-columns:1fr; }
+    .scene-body { display:grid; gap:12px; }
+    .lg { position:static; width:auto; grid-template-columns:auto 1fr; gap:16px; }
+    .brand h1 { font-size:22px; }
+  }
+  @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-logo" viewBox="0 0 48 48"><path d="M24 43C12 43 6 35 6 26 6 13 17 6 42 6c0 22-6 37-18 37z"/><path d="M9 42c7-11 15-20 26-27"/><path d="M20 30c4-1 8-4 11-8"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 6-3v10l-6-3z"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 4 13c0-6 6-9 16-9 0 10-3 16-9 16z"/><path d="M4 21c3-6 6-9 10-11"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM8 12h8M8 16h5"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14c2.8 0 4.5 1.8 4.5 4.5"/></symbol>
+  <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="7" r="3.2"/><path d="M5.5 21v-4a6.5 6.5 0 0 1 13 0v4z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M17 5h4"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 8.5 4.5 4.5 0 0 1 17.5 18z"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 3 3 5-6"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16M14 6l6 6-6 6"/></symbol>
+  <symbol id="i-rupee" viewBox="0 0 24 24"><path d="M6 4h12M6 9h12M6 4c5 0 7 2 7 5s-2 5-7 5l8 6"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="brand">
+    <svg class="logo ic" aria-hidden="true"><use href="#i-logo"/></svg>
+    <div><h1>Green Building Digital Twin</h1><p>Smarter spaces. Lower energy. A sustainable tomorrow.</p></div>
+  </div>
+  <div class="pills">
+    <div class="pill" id="status" data-state="connecting"><i class="dot"></i><div><b id="statusText">Connecting</b><small id="statusSub">Waiting for the server</small></div></div>
+    <div class="pill"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg><div><b id="clock">--:--:--</b><small id="date">&nbsp;</small></div></div>
+    <div class="pill"><svg class="ic sun" aria-hidden="true"><use href="#i-sun"/></svg><div><b id="comfort">--</b><small id="comfortSub">Indoor Comfort</small></div></div>
+    <button class="pill ai" id="aiTop" type="button"><svg class="ic" aria-hidden="true"><use href="#i-spark"/></svg><b>AI Assistant</b></button>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="side">
+    <nav class="card nav" aria-label="Sections">
+      <button class="nv active" data-go="top" type="button"><svg class="ic"><use href="#i-home"/></svg>Overview</button>
+      <button class="nv" data-go="cams" type="button"><svg class="ic"><use href="#i-cam"/></svg>Cameras</button>
+      <button class="nv" data-go="scene" type="button"><svg class="ic"><use href="#i-bulb"/></svg>Lighting</button>
+      <button class="nv" data-go="trend" type="button"><svg class="ic"><use href="#i-bolt"/></svg>Energy</button>
+      <button class="nv" data-go="ai" type="button"><svg class="ic"><use href="#i-leaf"/></svg>Sustainability</button>
+      <button class="nv" data-go="alerts" type="button"><svg class="ic"><use href="#i-shield"/></svg>Security</button>
+      <button class="nv" id="nvReport" type="button"><svg class="ic"><use href="#i-clip"/></svg>Reports</button>
+      <button class="nv" id="nvSettings" type="button"><svg class="ic"><use href="#i-gear"/></svg>Settings</button>
+    </nav>
+    <section class="card sum">
+      <h2><svg class="ic g"><use href="#i-leaf"/></svg>Building Summary</h2>
+      <div class="row first"><svg class="ic" style="display:none"></svg><div class="lb">Total Occupancy</div><b class="vl" id="sOcc">0</b></div>
+      <div class="row"><svg class="ic"><use href="#i-bolt"/></svg><div class="lb">Current Lighting Power<small>All zones, right now</small></div><b class="vl" id="sNow">0 kW</b></div>
+      <div class="row"><svg class="ic"><use href="#i-bolt"/></svg><div class="lb">Baseline Power (Always On)<small>If every light stayed on</small></div><b class="vl" id="sBase">0 kW</b></div>
+      <div class="row"><svg class="ic"><use href="#i-leaf"/></svg><div class="lb">Energy Saved<small>Right now</small></div><b class="vl" id="sSaved">0%</b></div>
+      <div class="row"><svg class="ic"><use href="#i-cloud"/></svg><div class="lb">CO&#8322; Avoided<small>Since the tracker started</small></div><b class="vl" id="sCo2">0 g</b></div>
+      <div class="row"><svg class="ic"><use href="#i-rupee"/></svg><div class="lb">Est. Monthly Savings<small>If this rate held</small></div><b class="vl" id="sRs">&#8377; 0</b></div>
+      <p class="foot" id="sNote">Estimates use the tracker's power and cost assumptions.</p>
+    </section>
+  </aside>
+
+  <main class="center">
+    <section class="card" id="scene">
+      <div class="chead"><h2><svg class="ic g"><use href="#i-layers"/></svg>3D Building View</h2>
+        <select class="sel" aria-label="Floor"><option>Floor 1</option></select></div>
+      <div class="scene-body">
+        <div class="svgwrap">
+          <svg id="bld" viewBox="0 0 820 560" role="img" aria-label="Isometric floor plan showing live lighting and people in each camera zone"></svg>
+          <div class="compass" aria-hidden="true"><span>N</span></div>
+        </div>
+        <aside class="lg" aria-label="Legend">
+          <div><h3>Lighting Intensity</h3>
+            <div class="gbar" style="margin-top:8px"><i></i><ul><li>100%</li><li>75%</li><li>50%</li><li>25%</li><li>0%</li></ul></div></div>
+          <ul class="keys">
+            <li><svg class="ic fill" style="color:#34d399"><use href="#i-person"/></svg>Person (moving)</li>
+            <li><svg class="ic fill" style="color:#38bdf8"><use href="#i-person"/></svg>Person (stationary)</li>
+            <li><svg class="ic" style="color:#34d399"><use href="#i-arrow"/></svg>Movement direction</li>
+            <li><svg class="ic" style="color:#34d399"><use href="#i-cam"/></svg>Camera</li>
+            <li><span class="zb"></span>Zone boundary</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section class="card" id="cams">
+      <div class="chead"><h2><svg class="ic g"><use href="#i-cam"/></svg>Live Camera Feeds</h2><span class="link" id="camCount" style="cursor:default"></span></div>
+      <div class="camgrid" id="camgrid"></div>
+    </section>
+  </main>
+
+  <section class="right">
+    <section class="card" id="ai">
+      <div class="chead"><h2><svg class="ic g"><use href="#i-spark"/></svg>AI Insights &amp; Recommendations</h2><span class="pillsrc" id="aiSrc">Rules</span></div>
+      <div class="upd" id="aiUpd">Collecting data</div>
+      <div id="insights"></div>
+      <div class="aifoot"><span class="foot" style="margin:0" id="aiNote"></span><button class="btn" id="aiBtn" type="button">Analyze now</button></div>
+    </section>
+
+    <section class="card" id="alerts">
+      <div class="chead"><h2><svg class="ic g"><use href="#i-shield"/></svg>Security Alerts</h2><button class="link" id="alertsAll" type="button" hidden>View All</button></div>
+      <div id="alertList"></div>
+    </section>
+
+    <section class="card" id="trend">
+      <div class="chead"><h2><svg class="ic g"><use href="#i-bolt"/></svg>Energy Usage Trend</h2>
+        <select class="sel" id="range" aria-label="Time range"><option value="2">Last 2 min</option><option value="5">Last 5 min</option><option value="15">Last 15 min</option></select></div>
+      <div class="trendbox"><canvas id="trendCv" aria-label="Lighting power over time against the always-on baseline"></canvas>
+        <div class="key"><span><i></i>Current</span><span><i class="b"></i>Baseline</span></div></div>
+    </section>
+
+    <section class="card" id="occCard">
+      <div class="chead"><h2><svg class="ic g"><use href="#i-users"/></svg>Zone Occupancy</h2></div>
+      <div class="occ">
+        <div class="donut"><svg viewBox="0 0 120 120" id="donut" aria-hidden="true"><circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="11"/></svg><div><b id="occTotal">0</b><small>Total People</small></div></div>
+        <div class="zbars" id="zbars"></div>
+      </div>
+    </section>
+  </section>
+</div>
+
+<dialog id="dlg">
+  <h2>Settings</h2>
+  <p>Open this dashboard from another device on the same Wi-Fi:</p>
+  <div class="drow"><code id="dUrl">-</code><button class="btn" id="dCopy" type="button">Copy link</button></div>
+  <p id="dNote"></p>
+  <p>After-hours alerts use <code id="dHours"></code> as the window when nobody should be in the building. The recommendation engine in use is <code id="dAi">rules</code>.</p>
+  <button class="btn" id="dClose" type="button">Close</button>
+</dialog>
+
+<script>
+(() => {
+  'use strict';
+  const TILES = 30;
+  const AFTER_FROM = 22, AFTER_TO = 6;   // hours when nobody should be in the building
+  const INDOOR_TEMP_C = null;            // there is no temperature sensor yet: set a number here to show it in the header
+
+  const $ = id => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const icon = (id, cls) => { const s = document.createElementNS(NS, 'svg'); s.setAttribute('class', 'ic' + (cls ? ' ' + cls : '')); const u = document.createElementNS(NS, 'use'); u.setAttribute('href', '#' + id); s.appendChild(u); return s; };
+  const pad = n => String(n).padStart(2, '0');
+  const hhmm = d => pad(d.getHours()) + ':' + pad(d.getMinutes());
+
+  /* ---------- lighting colours: 0% navy, 25% blue, 50% green, 75% lime, 100% yellow ---------- */
+  const STOPS = [[0, [30, 42, 120]], [.25, [14, 122, 196]], [.5, [18, 184, 134]], [.75, [123, 214, 52]], [1, [217, 242, 68]]];
+  const heatCache = {};
+  function heat(g) {
+    const k = Math.round(Math.max(0, Math.min(1, g)) * 50);
+    if (heatCache[k]) return heatCache[k];
+    const t = k / 50; let i = 0;
+    while (i < STOPS.length - 2 && t > STOPS[i + 1][0]) i++;
+    const [t0, c0] = STOPS[i], [t1, c1] = STOPS[i + 1], u = (t - t0) / (t1 - t0);
+    return heatCache[k] = 'rgb(' + c0.map((v, j) => Math.round(v + (c1[j] - v) * u)).join(',') + ')';
+  }
+
+  /* ---------- isometric scene (bigger, steeper view, richer materials) ---------- */
+  const S = { ox: 335, oy: 88, a: 18, b: 11, c: 11 };
+  const ARROW_DEG = Math.atan2(S.b, S.a) * 180 / Math.PI;
+  const P = (x, y, z = 0) => [S.ox + (x - y) * S.a, S.oy + (x + y) * S.b - z * S.c];
+  const f1 = n => n.toFixed(1);
+  const pts = arr => arr.map(([x, y, z]) => { const p = P(x, y, z || 0); return f1(p[0]) + ',' + f1(p[1]); }).join(' ');
+  const poly = (arr, fill, ex = '') => '<polygon points="' + pts(arr) + '" fill="' + fill + '" ' + ex + '/>';
+  function box(x0, y0, x1, y1, h, z0, c) {
+    const st = c.s ? ' stroke="' + c.s + '" stroke-width=".6" stroke-linejoin="round"' : '';
+    return poly([[x0, y1, z0], [x1, y1, z0], [x1, y1, h], [x0, y1, h]], c.l, st)
+         + poly([[x1, y0, z0], [x1, y1, z0], [x1, y1, h], [x1, y0, h]], c.r, st)
+         + poly([[x0, y0, h], [x1, y0, h], [x1, y1, h], [x0, y1, h]], c.t, st);
+  }
+  const line3 = (a, b, stroke, op) => { const p = P(a[0], a[1], a[2]), q = P(b[0], b[1], b[2]); return '<line x1="' + f1(p[0]) + '" y1="' + f1(p[1]) + '" x2="' + f1(q[0]) + '" y2="' + f1(q[1]) + '" stroke="' + stroke + '" stroke-opacity="' + op + '"/>'; };
+
+  const ZONES = [
+    { strip: { x0: .8,  x1: 23.2, y0: 6.9,  y1: 8.7  }, cam: [1, 7.8, 2.6],     tag: [24, 28]   },
+    { strip: { x0: 14.8, x1: 23.2, y0: 2.5, y1: 4.2  }, cam: [19, .4, 3],       tag: [470, 22] },
+    { strip: { x0: 13.8, x1: 23.2, y0: 11.8, y1: 13.5 }, cam: [23.2, 12.6, 2.6], tag: [640, 488] }
+  ];
+  let scene = null;   // { tiles:[[polys],..], glows:[[polys],..], people:[g..] }
+
+  function buildScene(names) {
+    const OUT   = { t: '#5d7870', l: '#33493f', r: '#26392f', s: '#7fc7ad' };   // exterior back walls
+    const WALL  = { t: '#647d75', l: '#364c44', r: '#293d37', s: '#7fc7ad' };   // inner partitions
+    const FRAME = { t: '#7fa296', l: '#3f5a50', r: '#2f453d', s: '#9ad8c0' };
+    const SLAB  = { t: '#10231d', l: '#0b1815', r: '#0d1c18', s: '#2a6a55' };
+    const DESK  = { t: '#eef2ec', l: '#aab5ad', r: '#84918a', s: '#69766f' };
+    const WOOD  = { t: '#8a6445', l: '#563b27', r: '#42301f', s: '#a9825d' };
+    const BENCH = { t: '#e6eef0', l: '#a6b8bd', r: '#80939a', s: '#6e8187' };
+    const INST  = { t: '#4cc9dc', l: '#268795', r: '#1d6c78', s: '#9ae8f4' };
+    const MON   = { t: '#16211e', l: '#0c1412', r: '#0c1412', s: '#3b4c47' };
+    const CH    = { t: '#46586a', l: '#2b3844', r: '#212c36', s: '#667a8d' };
+    const SOFA  = { t: '#a1aca6', l: '#65726c', r: '#505c57', s: '#bfcac4' };
+    const STEP  = { t: '#c8d3cd', l: '#7c8a83', r: '#66736d', s: '#e4ede8' };
+    const CORE  = { t: '#44564f', l: '#25312d', r: '#1b2522', s: '#648a7c' };
+    const items = [];
+    const add = (k, s) => items.push({ k, s });
+    const seg = (x0, y0, x1, y1, h, c, z0 = 0, kb = 0) => add((x0 + x1) / 2 + (y0 + y1) / 2 + kb, box(x0, y0, x1, y1, h, z0, c));
+
+    const WH = 1.7;
+    const wallX = (y, a, b, gaps) => { for (let x = a; x < b; x += 2) { const x1 = Math.min(x + 2, b), m = (x + x1) / 2; if (!gaps.some(g => m >= g[0] && m <= g[1])) seg(x, y, x1, y + .25, WH, WALL); } };
+    const wallY = (x, a, b, gaps) => { for (let y = a; y < b; y += 2) { const y1 = Math.min(y + 2, b), m = (y + y1) / 2; if (!gaps.some(g => m >= g[0] && m <= g[1])) seg(x, y, x + .25, y1, WH, WALL); } };
+    wallX(6.4, 0, 24, [[2, 4], [10, 12], [18, 20]]);
+    wallX(9.2, 0, 24, [[4, 6], [12, 14], [16, 18]]);
+    wallY(8, 0, 6.4, [[2, 4]]);  wallY(14, 0, 6.4, [[4, 6]]);
+    wallY(7, 9.2, 16, [[11.2, 13.2]]);  wallY(13, 9.2, 16, [[11.2, 13.2]]);
+
+    // workstation: desk, monitor, chair with a backrest
+    const ws = (x, y) => {
+      seg(x, y, x + 1.5, y + .9, .55, DESK);
+      seg(x + .55, y + .12, x + 1, y + .24, 1.0, MON, .55, .4);
+      seg(x + .5, y + 1.05, x + 1, y + 1.55, .45, CH, 0, .4);
+      seg(x + .5, y + 1.45, x + 1, y + 1.58, .9, CH, 0, .5);
+    };
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) ws(.9 + c * 2.4, 1 + r * 2.4);       // office A
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) ws(8.9 + c * 2.5, 1.1 + r * 2.4);    // office B
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) ws(7.9 + c * 2.5, 10.2 + r * 2.8);   // office D
+    // meeting room
+    seg(1.6, 11.6, 5.4, 13.4, .6, WOOD);
+    [2.0, 3.2, 4.4].forEach(x => {
+      seg(x, 10.8, x + .55, 11.35, .45, CH); seg(x, 10.8, x + .55, 10.92, .88, CH, 0, -.2);
+      seg(x, 13.65, x + .55, 14.2, .45, CH); seg(x, 14.08, x + .55, 14.2, .88, CH, 0, .3);
+    });
+    seg(5.6, 12.1, 5.9, 12.9, .5, CH);
+    // lab benches with instruments and stools
+    [[15, 10], [19, 10], [15, 14.3], [19.5, 14.3]].forEach(p => {
+      const x = p[0], y = p[1];
+      seg(x, y, x + 3.4, y + .8, .6, BENCH);
+      seg(x + .3, y + .15, x + .95, y + .65, .98, INST, .6, .3);
+      seg(x + 1.5, y + .12, x + 2.1, y + .22, 1.1, MON, .6, .3);
+      seg(x + 2.45, y + .15, x + 3.05, y + .65, .86, DESK, .6, .3);
+      seg(x + 1.0, y - .55, x + 1.4, y - .15, .4, CH);
+      seg(x + 2.2, y - .55, x + 2.6, y - .15, .4, CH);
+    });
+    // lobby: sofas, coffee table, stairs
+    [[15.2, .5], [20.2, .5]].forEach(p => {
+      seg(p[0], p[1], p[0] + 2.8, p[1] + .3, .98, SOFA, 0, -.3);
+      seg(p[0], p[1] + .3, p[0] + 2.8, p[1] + 1.05, .5, SOFA);
+    });
+    seg(18.35, .65, 19.75, 1.35, .36, WOOD);
+    for (let i = 0; i < 6; i++) seg(21 + i * .4, 4.9, 21 + (i + 1) * .4, 6.1, .18 * (i + 1), STEP);
+
+    // green islands + plants
+    const disc = (x, y, r, fill) => { const q = P(x, y, .02); add(x + y - .3, '<ellipse cx="' + f1(q[0]) + '" cy="' + f1(q[1]) + '" rx="' + f1(r * 1.414 * S.a) + '" ry="' + f1(r * 1.414 * S.b) + '" fill="' + fill + '" stroke="#7bd88f" stroke-opacity=".65" stroke-width="1"/>'); };
+    const plant = (x, y, sc = 1) => {
+      const q = P(x, y, 0);
+      add(x + y + .4, '<g transform="translate(' + f1(q[0]) + ' ' + f1(q[1]) + ') scale(' + sc + ')"><ellipse rx="10" ry="4.8" fill="rgba(0,0,0,.4)"/><path d="M-5 0L-4 -7H4L5 0Z" fill="#5a4636"/><circle cy="-16" r="9.5" fill="#1d7646"/><circle cx="-6.5" cy="-12" r="6.5" fill="#2f9e5b"/><circle cx="6" cy="-19" r="7" fill="#35b869"/><circle cx="-2" cy="-23" r="5.2" fill="#5be58f"/></g>');
+    };
+    disc(16, 5.55, .85, '#2d7048'); disc(18.8, 5.55, .8, '#2d7048');
+    plant(16, 5.5, 1.3); plant(18.8, 5.5, 1.15);
+    [[14.5, 1.2, 1.2], [23.2, 1.1, 1.25], [.6, 5.8, 1], [7.5, 5.8, 1], [13.3, 5.8, 1], [.6, 9.9, 1], [6.4, 9.9, 1], [12.4, 15.3, 1], [23.3, 9.9, 1.1], [.55, 6.8, 1.1], [23.3, 6.7, 1.1], [.6, 15.2, 1]].forEach(p => plant(p[0], p[1], p[2]));
+    items.sort((a, b) => a.k - b.k);
+
+    let svg = '<defs>'
+      + '<radialGradient id="warm"><stop offset="0" stop-color="#ffc233" stop-opacity=".95"/><stop offset=".55" stop-color="#f59e0b" stop-opacity=".35"/><stop offset="1" stop-color="#f59e0b" stop-opacity="0"/></radialGradient>'
+      + '<radialGradient id="hot"><stop offset="0" stop-color="#fff0a8" stop-opacity=".95"/><stop offset=".6" stop-color="#ffd24a" stop-opacity=".3"/><stop offset="1" stop-color="#ffd24a" stop-opacity="0"/></radialGradient>'
+      + '<radialGradient id="cool"><stop offset="0" stop-color="#5eead4" stop-opacity=".9"/><stop offset=".6" stop-color="#22d3ee" stop-opacity=".3"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></radialGradient>'
+      + '<radialGradient id="lime"><stop offset="0" stop-color="#bef264" stop-opacity=".9"/><stop offset=".6" stop-color="#84cc16" stop-opacity=".3"/><stop offset="1" stop-color="#84cc16" stop-opacity="0"/></radialGradient>'
+      + '<filter id="blur" x="-25%" y="-120%" width="150%" height="340%"><feGaussianBlur stdDeviation="7"/></filter>'
+      + '<filter id="blur2" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="18"/></filter>'
+      + '<filter id="blur3" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3"/></filter></defs>';
+    // ground glow and neon outline
+    svg += poly([[-1.5, -1.5, 0], [25.5, -1.5, 0], [25.5, 17.5, 0], [-1.5, 17.5, 0]], 'rgba(34,197,94,.30)', 'filter="url(#blur2)" transform="translate(0 16)"');
+    const rim = [[-.7, -.7, -.9], [24.7, -.7, -.9], [24.7, 16.7, -.9], [-.7, 16.7, -.9]];
+    svg += poly(rim, 'none', 'stroke="#22c55e" stroke-opacity=".7" stroke-width="3" filter="url(#blur3)"') + poly(rim, 'none', 'stroke="#4ade80" stroke-opacity=".75" stroke-width="1"');
+    svg += box(0, 0, 24, 16, 0, -.9, SLAB);
+    // floors
+    const room = (x0, y0, x1, y1, fill) => poly([[x0, y0, .02], [x1, y0, .02], [x1, y1, .02], [x0, y1, .02]], fill, 'stroke="#3a7a64" stroke-opacity=".35" stroke-width=".6"');
+    svg += room(0, 0, 8, 6.4, '#2c4a40') + room(8, 0, 14, 6.4, '#2c4a40') + room(14, 0, 24, 6.4, '#2f5a46')
+         + room(0, 9.2, 7, 16, '#2c4a40') + room(7, 9.2, 13, 16, '#2c4a40') + room(13, 9.2, 24, 16, '#2a4f58') + room(0, 6.4, 24, 9.2, '#173430');
+    // back (north-west and north-east) exterior walls with windows
+    svg += box(0, 0, 24, .3, 2.1, 0, OUT) + box(0, 0, .3, 16, 2.1, 0, OUT);
+    for (let x = 1.1; x < 22.5; x += 3.4) svg += poly([[x, .3, .85], [x + 2.2, .3, .85], [x + 2.2, .3, 1.8], [x, .3, 1.8]], 'rgba(120,225,210,.30)', 'stroke="#a8f0dd" stroke-opacity=".55" stroke-width=".7"');
+    for (let y = 1.1; y < 15; y += 3.4) svg += poly([[.3, y, .85], [.3, y + 2.2, .85], [.3, y + 2.2, 1.8], [.3, y, 1.8]], 'rgba(120,225,210,.30)', 'stroke="#a8f0dd" stroke-opacity=".55" stroke-width=".7"');
+    // warm room light pools
+    const glow = (x0, y0, x1, y1, id, op, ex = '') => poly([[x0, y0, .03], [x1, y0, .03], [x1, y1, .03], [x0, y1, .03]], 'url(#' + id + ')', 'fill-opacity="' + op + '" ' + ex);
+    svg += glow(.3, .3, 7.7, 6.1, 'warm', .9) + glow(1.4, 1, 6.6, 5.3, 'hot', .65)
+         + glow(8.3, .3, 13.7, 6.1, 'warm', .9) + glow(9, 1, 13, 5.3, 'hot', .65)
+         + glow(.3, 9.5, 6.7, 15.7, 'warm', .8) + glow(1.2, 10.4, 5.8, 14.8, 'hot', .55)
+         + glow(7.3, 9.5, 12.7, 15.7, 'warm', .9) + glow(8, 10.2, 12, 14.6, 'hot', .6);
+    svg += glow(14.3, .3, 23.7, 6.1, 'lime', .3, 'id="rg1"') + glow(13.3, 9.5, 23.7, 15.7, 'cool', .3, 'id="rg2"');
+    // corridor and zone lighting strips
+    ZONES.forEach((z, k) => {
+      const s = z.strip, tw = (s.x1 - s.x0) / TILES;
+      let tiles = '';
+      for (let i = 0; i < TILES; i++) { const x = s.x0 + i * tw; tiles += poly([[x, s.y0, .05], [x + tw * .9, s.y0, .05], [x + tw * .9, s.y1, .05], [x, s.y1, .05]], '#14234a', 'fill-opacity=".5"'); }
+      svg += '<g data-glow="' + k + '" filter="url(#blur)" opacity=".95">' + tiles + '</g><g data-tiles="' + k + '">' + tiles + '</g>';
+      const m = .45;
+      svg += poly([[s.x0 - m, s.y0 - m, .06], [s.x1 + m, s.y0 - m, .06], [s.x1 + m, s.y1 + m, .06], [s.x0 - m, s.y1 + m, .06]], 'none', 'stroke="#34d399" stroke-opacity=".5" stroke-dasharray="4 3" stroke-width="1"');
+    });
+    // furniture, partitions, plants (depth sorted)
+    svg += items.map(i => i.s).join('');
+    // front glass facade
+    const FR = 1.5;
+    svg += poly([[0, 16, 0], [24, 16, 0], [24, 16, FR], [0, 16, FR]], 'rgba(70,160,150,.20)', 'stroke="#7fd8bf" stroke-opacity=".6" stroke-width=".8"');
+    svg += poly([[24, 0, 0], [24, 16, 0], [24, 16, FR], [24, 0, FR]], 'rgba(70,160,150,.20)', 'stroke="#7fd8bf" stroke-opacity=".6" stroke-width=".8"');
+    for (let x = 2; x < 24; x += 2) svg += line3([x, 16, 0], [x, 16, FR], '#7fd8bf', .4);
+    for (let y = 2; y < 16; y += 2) svg += line3([24, y, 0], [24, y, FR], '#7fd8bf', .4);
+    svg += box(0, 15.85, 24, 16, .18, 0, FRAME) + box(0, 15.85, 24, 16, FR + .1, FR - .05, FRAME)
+         + box(23.85, 0, 24, 15.85, .18, 0, FRAME) + box(23.85, 0, 24, 15.85, FR + .1, FR - .05, FRAME);
+    // elevator / stair core outside the east facade
+    svg += box(24.2, 2.8, 26.8, 6.8, .12, 0, FRAME) + box(24.6, 3.2, 26.4, 6.4, 3.4, .12, CORE) + box(25, 3.6, 26, 4.8, 4.1, 3.4, FRAME);
+    for (let i = 0; i < 3; i++) svg += poly([[24.8 + i * .55, 6.4, 1.2], [25.2 + i * .55, 6.4, 1.2], [25.2 + i * .55, 6.4, 2.9], [24.8 + i * .55, 6.4, 2.9]], '#fbbf24', 'fill-opacity=".55"');
+    for (let i = 0; i < 3; i++) svg += poly([[26.4, 3.6 + i * .9, 1.2], [26.4, 4.0 + i * .9, 1.2], [26.4, 4.0 + i * .9, 2.9], [26.4, 3.6 + i * .9, 2.9]], '#22d3ee', 'fill-opacity=".4"');
+
+    // camera markers and leader lines
+    ZONES.forEach((z, k) => {
+      if (names[k] == null) return;
+      const c = P(z.cam[0], z.cam[1], z.cam[2]), tx = z.tag[0] + (z.tag[0] > 300 ? 0 : 112), ty = z.tag[1] + 17;
+      svg += '<line x1="' + tx + '" y1="' + ty + '" x2="' + f1(c[0]) + '" y2="' + f1(c[1]) + '" stroke="#34d399" stroke-opacity=".7" stroke-width="1.1"/>'
+          + '<g transform="translate(' + f1(c[0]) + ' ' + f1(c[1]) + ')"><circle class="ring" r="10" fill="none" stroke="#34d399"/><circle r="8" fill="#052e1f" stroke="#34d399" stroke-width="1.6"/><circle r="3.4" fill="#34d399"/></g>';
+    });
+    svg += '<g id="ppl"></g><g id="tags"></g>';
+    $('bld').innerHTML = svg;
+
+    scene = { tiles: [], glows: [], last: [], people: [], rg: [null, $('rg1'), $('rg2')] };
+    ZONES.forEach((z, k) => {
+      scene.tiles[k] = [...$('bld').querySelectorAll('[data-tiles="' + k + '"] polygon')];
+      scene.glows[k] = [...$('bld').querySelectorAll('[data-glow="' + k + '"] polygon')];
+      scene.last[k] = new Array(TILES).fill(-1);
+    });
+    const tags = $('tags'), ppl = $('ppl');
+    names.forEach((nm, k) => {
+      if (!ZONES[k]) return;
+      const g = document.createElementNS(NS, 'g'); g.setAttribute('transform', 'translate(' + ZONES[k].tag[0] + ' ' + ZONES[k].tag[1] + ')');
+      g.innerHTML = '<rect width="116" height="36" rx="9" fill="rgba(4,20,15,.9)" stroke="#34d399" stroke-opacity=".6"/><circle cx="18" cy="18" r="7.5" fill="#052e1f" stroke="#34d399" stroke-width="1.5"/><circle cx="18" cy="18" r="3.2" fill="#34d399"/>';
+      const t1 = document.createElementNS(NS, 'text'), t2 = document.createElementNS(NS, 'text');
+      [t1, t2].forEach(t => { t.setAttribute('x', 34); t.setAttribute('font-family', 'Inter,Segoe UI,sans-serif'); });
+      t1.setAttribute('y', 16); t1.setAttribute('font-size', 12); t1.setAttribute('font-weight', 600); t1.setAttribute('fill', '#e7f5ed'); t1.textContent = 'Camera ' + (k + 1);
+      t2.setAttribute('y', 29.5); t2.setAttribute('font-size', 11); t2.setAttribute('fill', '#8ba79a'); t2.textContent = nm.length > 14 ? nm.slice(0, 13) + '…' : nm;
+      g.append(t1, t2); tags.appendChild(g);
+      scene.people[k] = new Map();   // person id -> marker, so each person keeps their own marker
+    });
+  }
+
+  const MAX_PEOPLE = 12;
+  function makePerson() {
+    const el = document.createElementNS(NS, 'g');
+    el.innerHTML = '<g transform="scale(1.3)"><g class="arr"></g><ellipse cx="0" cy="1" rx="8" ry="3.2" fill="rgba(0,0,0,.45)"/><circle class="pr" r="11" fill="none" stroke-width="1.5" stroke-opacity=".6"/><rect class="pb" x="-4.2" y="-15" width="8.4" height="14" rx="3.2"/><circle class="ph" cx="0" cy="-19.5" r="4.4"/></g>';
+    $('ppl').appendChild(el); return { el, cx: null, cy: 0, tx: 0, ty: 0 };
+  }
+
+  // everyone the camera sees. The server sends c.people = [{id, position, lane, direction}];
+  // if it is missing (older tracker.py), fall back to c.occupancy markers around the one tracked position
+  function peopleOf(c) {
+    if (!c.online) return [];
+    if (Array.isArray(c.people)) {
+      return c.people.map((q, i) => ({ id: q.id != null ? q.id : i, pos: +(q.position != null ? q.position : .5), dir: q.direction || 'STATIONARY', lane: q.lane }));
+    }
+    const n = Math.min(c.occupancy || 0, MAX_PEOPLE), out = [];
+    for (let i = 0; i < n; i++) {
+      const step = Math.ceil(i / 2) * .07 * (i % 2 ? 1 : -1);
+      out.push({ id: 'f' + i, pos: (+c.position || .5) + (i ? step : 0), dir: c.direction, lane: i % 2 ? .3 : .7 });
+    }
+    return out;
+  }
+
+  function updateScene(cams, ids) {
+    ids.forEach((id, k) => {
+      const c = cams[id], z = ZONES[k]; if (!z || !scene.tiles[k]) return;
+      const last = scene.last[k];
+      for (let i = 0; i < TILES; i++) {
+        const g = +c.grid[i] || 0, q = Math.round(g * 50);
+        if (last[i] === q) continue;
+        last[i] = q;
+        const on = g >= .03, fill = on ? heat(g) : '#14234a', op = on ? (.6 + .4 * g).toFixed(2) : '.5';
+        scene.tiles[k][i].setAttribute('fill', fill); scene.tiles[k][i].setAttribute('fill-opacity', op);
+        scene.glows[k][i].setAttribute('fill', fill); scene.glows[k][i].setAttribute('fill-opacity', on ? (g * .95).toFixed(2) : '0');
+      }
+      const mean = c.grid.reduce((a, b) => a + b, 0) / TILES;
+      if (scene.rg[k]) scene.rg[k].setAttribute('fill-opacity', (.25 + .7 * mean).toFixed(2));
+      const map = scene.people[k]; if (!map) return;
+      const list = peopleOf(c).slice(0, MAX_PEOPLE), st = z.strip, seen = new Set();
+      list.forEach(m => {
+        seen.add(m.id);
+        let o = map.get(m.id); if (!o) { o = makePerson(); map.set(m.id, o); }
+        const pos = Math.max(0, Math.min(1, m.pos)), lane = m.lane == null ? .5 : Math.max(0, Math.min(1, m.lane));
+        const q = P(st.x0 + pos * (st.x1 - st.x0), st.y0 + (.2 + .6 * lane) * (st.y1 - st.y0), 0), moving = m.dir !== 'STATIONARY';
+        o.tx = q[0]; o.ty = q[1];
+        if (o.cx === null) { o.cx = o.tx; o.cy = o.ty; o.el.setAttribute('transform', 'translate(' + f1(o.cx) + ' ' + f1(o.cy) + ')'); }
+        const col = moving ? '#34d399' : '#38bdf8', el = o.el;
+        el.querySelector('.pr').setAttribute('stroke', col);
+        el.querySelector('.pb').setAttribute('fill', col); el.querySelector('.ph').setAttribute('fill', col);
+        el.querySelector('.arr').innerHTML = moving
+          ? '<g transform="rotate(' + ARROW_DEG.toFixed(1) + ') scale(' + (m.dir === 'LEFT' ? '-1' : '1') + ' 1)"><path d="M18 -3l8 3l-8 3M26 0h-14" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></g>' : '';
+      });
+      map.forEach((o, id) => { if (!seen.has(id)) { o.el.remove(); map.delete(id); } });
+    });
+  }
+
+  // markers glide to their newest position instead of snapping
+  let lastFrame = performance.now();
+  (function glide(now) {
+    const k = 1 - Math.exp(-(now - lastFrame) / 1000 * 14); lastFrame = now;
+    if (scene) scene.people.forEach(map => map.forEach(o => {
+      if (o.cx === null) return;
+      o.cx += (o.tx - o.cx) * k; o.cy += (o.ty - o.cy) * k;
+      o.el.setAttribute('transform', 'translate(' + f1(o.cx) + ' ' + f1(o.cy) + ')');
+    }));
+    requestAnimationFrame(glide);
+  })(lastFrame);
+
+  /* ---------- camera cards ---------- */
+  let cards = [];
+  function buildCards(cams, ids) {
+    const grid = $('camgrid'); grid.textContent = ''; cards = [];
+    ids.forEach((id, k) => {
+      const c = cams[id], el = mk('div', 'camc'), h = mk('div', 'camh'), left = mk('div');
+      left.append(mk('b', null, 'Camera ' + (k + 1)), mk('span', 'nm', '– ' + c.name));
+      const live = mk('span', 'live'); live.append(mk('i'), document.createTextNode('Live')); h.append(left, live);
+      const vid = mk('div', 'vid'), img = mk('img'); img.alt = 'Live feed from ' + c.name; img.src = '/video_feed/' + id;
+      img.addEventListener('error', () => setTimeout(() => { img.src = '/video_feed/' + id + '?t=' + Date.now(); }, 2500));
+      vid.appendChild(img);
+      const meta = mk('div', 'meta'), m1 = mk('span'), m2 = mk('span'), m3 = mk('span'), n = mk('span', null, '0 people');
+      m1.append(icon('i-users'), n); const dir = mk('span', null, 'Vacant'); m2.append(dir); const br = mk('span', null, '0%'); m3.append(icon('i-sun'), br); meta.append(m1, m2, m3);
+      const pat = mk('div', 'pat'), cells = []; for (let i = 0; i < 15; i++) { const e = mk('i'); pat.appendChild(e); cells.push(e); }
+      el.append(h, vid, meta, pat, mk('span', 'cap', 'Lighting pattern')); grid.appendChild(el);
+      cards.push({ live, n, dir, br, cells, last: '' });
+    });
+  }
+  const DIR = { RIGHT: '→ Moving right', LEFT: '← Moving left', STATIONARY: 'Stationary' };
+  function updateCards(cams, ids) {
+    let on = 0;
+    ids.forEach((id, k) => {
+      const c = cams[id], card = cards[k]; if (!card) return;
+      if (c.online) on++;
+      card.live.className = 'live' + (c.online ? '' : ' off'); card.live.lastChild.textContent = c.online ? 'Live' : 'Offline';
+      card.n.textContent = c.occupancy + (c.occupancy === 1 ? ' person' : ' people');
+      card.dir.textContent = c.occupancy ? DIR[c.direction] : 'Vacant';
+      card.br.textContent = Math.round(100 * c.grid.reduce((a, b) => a + b, 0) / TILES) + '%';
+      const sig = c.grid.join(',');
+      if (sig !== card.last) {
+        card.last = sig;
+        card.cells.forEach((e, i) => { const v = Math.max(c.grid[2 * i], c.grid[2 * i + 1]); e.style.background = v < .04 ? '#22312c' : heat(v); });
+      }
+    });
+    $('camCount').textContent = on + ' of ' + ids.length + ' online';
+  }
+
+  /* ---------- AI insights ---------- */
+  const CAT = {
+    e: { t: 'Energy Efficiency', i: 'i-bolt' },
+    s: { t: 'Indoor Sustainability', i: 'i-leaf' },
+    r: { t: 'Resource Utilization', i: 'i-gear' }
+  };
+  function classify(line) {
+    const l = line.toLowerCase();
+    if (/ventilat|air quality|clean|comfort|humid|temperature|indoor/.test(l)) return 's';
+    if (/vacan|standby|timeout|lead distance|lights|power|energy|load|always-on|watt/.test(l)) return 'e';
+    return 'r';
+  }
+  function renderInsights(text, source) {
+    const box = $('insights'); box.textContent = '';
+    let lines = String(text).split('\n').map(l => l.trim()).filter(Boolean);
+    const out = lines.map((l, i) => {
+      const m = l.replace(/^[-*>\d.\s]+/, '').match(/^(energy|indoor|resource)[^:]{0,32}:\s*(.+)$/i);
+      let cat = m ? m[1][0].toLowerCase() : (source !== 'rules' && lines.length === 3 ? 'ser'[i] : classify(l));
+      cat = cat === 'i' ? 's' : cat;
+      return { cat, text: m ? m[2] : l.replace(/^[-*>\d.\s]+/, '') };
+    });
+    out.slice(0, 5).forEach(o => {
+      const c = CAT[o.cat] || CAT.r, card = mk('div', 'ins'), ico = mk('div', 'ico'), body = mk('div');
+      ico.appendChild(icon(c.i)); body.append(mk('h3', null, c.t), mk('p', null, o.text)); card.append(ico, body); box.appendChild(card);
+    });
+  }
+
+  /* ---------- security alerts ---------- */
+  const since = new Map(); let alertSig = '', showAll = false, lastAlerts = [];
+  function computeAlerts(cams, ids) {
+    const now = new Date(), h = now.getHours(), after = h >= AFTER_FROM || h < AFTER_TO, out = [], live = new Set();
+    ids.forEach((id, k) => {
+      const c = cams[id], tag = c.name + ' (Camera ' + (k + 1) + ')';
+      if (after && c.occupancy > 0) {
+        const key = 'a' + id; live.add(key); if (!since.has(key)) since.set(key, hhmm(now));
+        out.push({ cls: '', title: 'After-hours occupancy detected', sub: tag + ' • ' + since.get(key) + ' • ' + c.occupancy + (c.occupancy === 1 ? ' person' : ' people'), pill: 'Unverified' });
+      }
+    });
+    ids.forEach((id, k) => {
+      const c = cams[id];
+      if (!c.online) { const key = 'o' + id; live.add(key); if (!since.has(key)) since.set(key, hhmm(now)); out.push({ cls: 'warn', title: 'Camera offline', sub: c.name + ' (Camera ' + (k + 1) + ') • since ' + since.get(key), pill: 'Check' }); }
+    });
+    [...since.keys()].forEach(k => { if (!live.has(k)) since.delete(k); });
+    return out;
+  }
+  function renderAlerts() {
+    const sig = JSON.stringify(lastAlerts) + showAll; if (sig === alertSig) return; alertSig = sig;
+    const box = $('alertList'); box.textContent = '';
+    $('alertsAll').hidden = lastAlerts.length <= 2; $('alertsAll').textContent = showAll ? 'Show less' : 'View All';
+    if (!lastAlerts.length) {
+      const a = mk('div', 'alert ok'), ico = mk('div', 'ico'), t = mk('div'); ico.appendChild(icon('i-check'));
+      t.append(mk('b', null, 'No active alerts'), mk('small', null, 'All cameras online, nobody in the building after hours.')); a.append(ico, t, mk('span')); box.appendChild(a); return;
+    }
+    (showAll ? lastAlerts : lastAlerts.slice(0, 2)).forEach(x => {
+      const a = mk('div', 'alert ' + x.cls), ico = mk('div', 'ico'), t = mk('div'); ico.appendChild(icon('i-alert'));
+      t.append(mk('b', null, x.title), mk('small', null, x.sub)); a.append(ico, t, mk('span', 'tagp', x.pill)); box.appendChild(a);
+    });
+  }
+  $('alertsAll').onclick = () => { showAll = !showAll; renderAlerts(); };
+
+  /* ---------- energy trend ---------- */
+  const hist = []; let lastPush = 0;
+  function drawTrend() {
+    const cv = $('trendCv'), w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) return;
+    const dpr = window.devicePixelRatio || 1;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+    const mins = +$('range').value, now = Date.now(), t0 = now - mins * 60000, data = hist.filter(s => s.t >= t0);
+    const L = 40, R = 8, T = 22, B = 22, iw = w - L - R, ih = h - T - B;
+    const top = Math.max(.1, ...data.map(s => s.base)) / 1000, max = Math.ceil(top * 4) / 4 || .25;
+    const X = t => L + (t - t0) / (mins * 60000) * iw, Y = kw => T + ih - (kw / max) * ih;
+    ctx.font = '11px Inter,Segoe UI,sans-serif'; ctx.fillStyle = '#8ba79a'; ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.lineWidth = 1; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let i = 0; i <= 4; i++) { const kw = max * i / 4, y = Y(kw); ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - R, y); ctx.stroke(); ctx.fillText(kw.toFixed(max < 2 ? 2 : 1), L - 6, y); }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let i = 0; i <= 4; i++) { const t = t0 + (now - t0) * i / 4, d = new Date(t); ctx.fillText(mins <= 5 ? pad(d.getMinutes()) + ':' + pad(d.getSeconds()) : hhmm(d), L + iw * i / 4, h - B + 6); }
+    if (data.length < 2) { ctx.fillStyle = '#8ba79a'; ctx.textBaseline = 'middle'; ctx.fillText('Collecting data...', L + iw / 2, T + ih / 2); return; }
+    ctx.setLineDash([6, 5]); ctx.strokeStyle = 'rgba(229,231,235,.85)'; ctx.lineWidth = 1.4; ctx.beginPath();
+    data.forEach((s, i) => i ? ctx.lineTo(X(s.t), Y(s.base / 1000)) : ctx.moveTo(X(s.t), Y(s.base / 1000))); ctx.stroke(); ctx.setLineDash([]);
+    const grad = ctx.createLinearGradient(0, T, 0, T + ih); grad.addColorStop(0, 'rgba(34,197,94,.38)'); grad.addColorStop(1, 'rgba(34,197,94,0)');
+    ctx.beginPath(); data.forEach((s, i) => i ? ctx.lineTo(X(s.t), Y(s.w / 1000)) : ctx.moveTo(X(s.t), Y(s.w / 1000)));
+    ctx.lineTo(X(data[data.length - 1].t), T + ih); ctx.lineTo(X(data[0].t), T + ih); ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
+    ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 2.2; ctx.lineJoin = 'round'; ctx.beginPath();
+    data.forEach((s, i) => i ? ctx.lineTo(X(s.t), Y(s.w / 1000)) : ctx.moveTo(X(s.t), Y(s.w / 1000))); ctx.stroke();
+  }
+  $('range').onchange = drawTrend; window.addEventListener('resize', drawTrend);
+
+  /* ---------- zone occupancy ---------- */
+  const COLS = ['#22c55e', '#22d3ee', '#a3e635', '#f5b83d'];
+  let zrows = [];
+  function buildOcc(cams, ids) {
+    const box = $('zbars'); box.textContent = ''; zrows = [];
+    ids.forEach((id, k) => {
+      const r = mk('div'), hd = mk('div', 'h'), nm = mk('span', null, cams[id].name), v = mk('b', null, '0'), t = mk('div', 't'), f = mk('i');
+      f.style.background = COLS[k % COLS.length]; t.appendChild(f); hd.append(nm, v); r.append(hd, t); box.appendChild(r); zrows.push({ v, f });
+    });
+  }
+  function updateOcc(cams, ids, total) {
+    const C = 2 * Math.PI * 48, svg = $('donut'); svg.querySelectorAll('.seg').forEach(e => e.remove());
+    let off = 0; const mx = Math.max(1, ...ids.map(id => cams[id].occupancy));
+    ids.forEach((id, k) => {
+      const n = cams[id].occupancy; zrows[k].v.textContent = n; zrows[k].f.style.width = (100 * n / mx) + '%';
+      if (!n || !total) return;
+      const len = C * n / total, c = document.createElementNS(NS, 'circle');
+      c.setAttribute('class', 'seg'); c.setAttribute('cx', 60); c.setAttribute('cy', 60); c.setAttribute('r', 48); c.setAttribute('fill', 'none'); c.setAttribute('stroke', COLS[k % COLS.length]); c.setAttribute('stroke-width', 11);
+      c.setAttribute('stroke-dasharray', Math.max(0, len - 2).toFixed(1) + ' ' + C.toFixed(1)); c.setAttribute('stroke-dashoffset', (-off).toFixed(1)); svg.appendChild(c); off += len;
+    });
+    $('occTotal').textContent = total;
+  }
+
+  /* ---------- header, summary, one /state reading ---------- */
+  let built = false, ids = [], shownTs = null, last = null;
+  const fmtW = w => (w / 1000).toFixed(2) + ' kW';
+  function render(d) {
+    last = d;
+    const cams = d.cams, b = d.building;
+    if (!built) {
+      ids = Object.keys(cams); buildScene(ids.map(i => cams[i].name)); buildCards(cams, ids); buildOcc(cams, ids); built = true;
+    }
+    updateScene(cams, ids); updateCards(cams, ids); updateOcc(cams, ids, b.occupancy);
+
+    $('sOcc').textContent = b.occupancy; $('sNow').textContent = fmtW(b.watts); $('sBase').textContent = fmtW(b.baseline_watts);
+    $('sSaved').textContent = Math.round(b.saved_pct) + '%';
+    $('sCo2').textContent = b.co2_g >= 1000 ? (b.co2_g / 1000).toFixed(2) + ' kg' : b.co2_g.toFixed(1) + ' g';
+    $('sRs').textContent = '₹ ' + b.rs_month.toLocaleString('en-IN'); $('sNote').textContent = b.note; $('dNote').textContent = b.note;
+    $('dUrl').textContent = d.lan_url || '-';
+
+    const on = ids.filter(i => cams[i].online).length;
+    $('statusSub').textContent = on === ids.length ? 'All systems operational' : on + ' of ' + ids.length + ' cameras online';
+
+    const t = Date.now();
+    if (t - lastPush >= 1000) { lastPush = t; hist.push({ t, w: b.watts, base: b.baseline_watts }); if (hist.length > 900) hist.shift(); drawTrend(); }
+
+    lastAlerts = computeAlerts(cams, ids); renderAlerts();
+
+    const ins = d.insight;
+    if (ins.ts !== shownTs) {
+      shownTs = ins.ts; renderInsights(ins.text, ins.source);
+      $('aiSrc').textContent = ins.source === 'gemini' ? 'Gemini' : ins.source === 'ollama' ? 'Ollama' : 'Rules';
+      $('dAi').textContent = ins.source; $('aiBtn').textContent = 'Analyze now';
+      $('aiUpd').textContent = ins.ts ? 'Last update: ' + hhmm(new Date(ins.ts * 1000)) : 'Collecting data, first analysis in about 30 seconds';
+      $('aiNote').textContent = ins.source === 'rules' ? 'Rule-based. Set AI_BACKEND to use Gemini.' : '';
+    }
+  }
+
+  const st = $('status');
+  function online(on) {
+    const n = on ? 'live' : 'offline';
+    if (st.dataset.state === n) return;
+    st.dataset.state = n; $('statusText').textContent = on ? 'System Online' : 'Server not responding';
+    if (!on) $('statusSub').textContent = 'Check that tracker.py is running';
+  }
+  function tickClock() {
+    const d = new Date();
+    $('clock').textContent = d.toLocaleTimeString('en-GB');
+    $('date').textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  tickClock(); setInterval(tickClock, 1000);
+  if (typeof INDOOR_TEMP_C === 'number') { $('comfort').textContent = INDOOR_TEMP_C + '°C'; } else { $('comfortSub').textContent = 'Indoor Comfort (no sensor)'; }
+  $('dHours').textContent = pad(AFTER_FROM) + ':00 to ' + pad(AFTER_TO) + ':00';
+
+  /* ---------- navigation, report, settings, AI button ---------- */
+  const navBtns = [...document.querySelectorAll('.nv[data-go]')];
+  navBtns.forEach(b => b.addEventListener('click', () => {
+    navBtns.forEach(x => x.classList.toggle('active', x === b));
+    const id = b.dataset.go; id === 'top' ? window.scrollTo({ top: 0, behavior: 'smooth' }) : $(id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }));
+  const dlg = $('dlg');
+  $('nvSettings').onclick = () => dlg.showModal(); $('dClose').onclick = () => dlg.close();
+  $('dCopy').onclick = () => { try { navigator.clipboard.writeText($('dUrl').textContent); $('dCopy').textContent = 'Copied'; setTimeout(() => $('dCopy').textContent = 'Copy link', 1500); } catch (e) {} };
+  function analyze() { $('aiBtn').textContent = 'Analyzing...'; fetch('/api/ai/run', { method: 'POST' }).catch(() => {}); }
+  $('aiBtn').onclick = analyze;
+  $('aiTop').onclick = () => { $('ai').scrollIntoView({ behavior: 'smooth', block: 'start' }); analyze(); };
+  $('nvReport').onclick = () => {
+    if (!last) return;
+    const b = last.building, d = new Date(), L = ['GREEN BUILDING DIGITAL TWIN - SNAPSHOT REPORT', 'Generated: ' + d.toLocaleString(), '',
+      'Occupancy now: ' + b.occupancy, 'Lighting power now: ' + b.watts + ' W of ' + b.baseline_watts + ' W always-on baseline', 'Energy saved right now: ' + b.saved_pct + '%',
+      'Energy saved since tracker start: ' + b.wh_saved + ' Wh', 'CO2 avoided since tracker start: ' + b.co2_g + ' g', 'Estimated monthly savings: Rs ' + b.rs_month, b.note, '', 'ZONES'];
+    ids.forEach((i, k) => { const c = last.cams[i]; L.push('  Camera ' + (k + 1) + ' ' + c.name + ': ' + (c.online ? 'online' : 'offline') + ', ' + c.occupancy + ' people, ' + Math.round(c.watts) + ' W'); });
+    L.push('', 'RECOMMENDATIONS (' + last.insight.source + ')', last.insight.text);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([L.join('\n')], { type: 'text/plain' }));
+    a.download = 'green-twin-report-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '-' + pad(d.getHours()) + pad(d.getMinutes()) + '.txt'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  let fails = 0;
+  (async function poll() {
+    try { const r = await fetch('/state', { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP ' + r.status); render(await r.json()); fails = 0; online(true); }
+    catch (e) { if (++fails >= 5) online(false); }
+    setTimeout(poll, 100);
+  })();
+})();
+</script>
+</body>
+</html>
